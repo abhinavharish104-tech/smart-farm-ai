@@ -91,3 +91,4 @@ with tab2:
 
         st.success(f"Disease Class: {pred}")
         st.write(f"Confidence: {np.max(preds)*100:.2f}%")
+
