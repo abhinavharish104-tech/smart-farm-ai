@@ -1,7 +1,9 @@
-streamlit
-numpy
+streamlit==1.33.0
+numpy==1.24.4
 pillow
 scikit-learn
 joblib
 h5py
-tensorflow==2.15.0
+protobuf==3.20.3
+tensorflow-cpu==2.13.0
+
