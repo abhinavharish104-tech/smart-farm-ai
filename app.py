@@ -12,7 +12,7 @@ def load_irrigation_model():
 
 @st.cache_resource
 def load_disease_model():
-    return load_model("best_models/best_model_compat.h5")
+    return load_model("best_models/best_model_compat.h5", compile=False)
 
 irrigation_model = load_irrigation_model()
 disease_model = load_disease_model()
@@ -95,4 +95,5 @@ with tab2:
 
         st.success(f"Disease Class: {pred_class}")
         st.write(f"Confidence: {confidence:.2f}%")
+
 
