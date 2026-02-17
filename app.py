@@ -2,26 +2,41 @@ import streamlit as st
 import joblib
 import numpy as np
 from PIL import Image
-import tflite_runtime.interpreter as tflite
+import pickle
 
 # ---------------- LOAD MODELS ----------------
 irrigation_model = joblib.load("models/irrigation_model.pkl")
 
-# Load TFLite model
-interpreter = tflite.Interpreter(model_path="models/model.tflite")
-interpreter.allocate_tensors()
+with open("models/model_weights.pkl", "rb") as f:
+    weights = pickle.load(f)
 
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+
+# ---------------- SIMPLE CNN FORWARD PASS ----------------
+def relu(x):
+    return np.maximum(0, x)
+
+def softmax(x):
+    e = np.exp(x - np.max(x))
+    return e / e.sum(axis=1, keepdims=True)
+
+def dense(x, w, b):
+    return x @ w + b
+
+def simple_predict(img):
+    x = img.flatten().reshape(1, -1)
+
+    # last dense layer weights
+    w, b = weights[-1]
+    logits = dense(x, w, b)
+    return softmax(logits)
+
 
 # ---------------- UI ----------------
 st.title("🌱 Smart Irrigation & Crop Disease Dashboard")
 
 tab1, tab2 = st.tabs(["Irrigation Prediction", "Disease Detection"])
 
-# =====================================================
 # IRRIGATION
-# =====================================================
 with tab1:
     st.header("Irrigation Recommendation")
 
@@ -38,28 +53,17 @@ with tab1:
         irrigation_need = irrigation_model.predict(sample)[0]
         st.success(f"Recommended irrigation: {irrigation_need:.2f} liters per plant")
 
-# =====================================================
-# DISEASE DETECTION
-# =====================================================
+# DISEASE
 with tab2:
     st.header("Disease Detection")
 
     uploaded_file = st.file_uploader("Upload Leaf Image", type=["jpg","png","jpeg"])
 
-    if uploaded_file is not None:
-
-        # Preprocess image
-        img = Image.open(uploaded_file).resize((224,224))
+    if uploaded_file:
+        img = Image.open(uploaded_file).resize((64,64))
         img = np.array(img)/255.0
-        img = img.astype(np.float32)
-        img = np.expand_dims(img, axis=0)
 
-        # TFLite inference
-        interpreter.set_tensor(input_details[0]['index'], img)
-        interpreter.invoke()
-        preds = interpreter.get_tensor(output_details[0]['index'])
+        preds = simple_predict(img)
+        pred_class = int(np.argmax(preds))
 
-        pred_class = int(np.argmax(preds, axis=1)[0])
-        confidence = float(np.max(preds))
-
-        st.success(f"Disease detected: Class {pred_class}  |  Confidence: {confidence:.2f}")
+        st.success(f"Disease detected: Class {pred_class}")
