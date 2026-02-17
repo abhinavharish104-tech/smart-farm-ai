@@ -1,7 +1,9 @@
 streamlit==1.33.0
-numpy
+numpy==1.26.4
 pillow
 scikit-learn
 joblib
+tensorflow-cpu==2.15.0
+
 
 
