@@ -2,42 +2,33 @@ import streamlit as st
 import joblib
 import numpy as np
 from PIL import Image
-import pickle
+from tensorflow.keras.models import load_model
 
 # ================= LOAD MODELS =================
+
 @st.cache_resource
 def load_irrigation_model():
     return joblib.load("best_models/irrigation_model.pkl")
 
 @st.cache_resource
-def load_weights():
-    with open("best_models/model_weights.pkl", "rb") as f:
-        return pickle.load(f)
+def load_disease_model():
+    return load_model("best_models/best_model.h5")
 
 irrigation_model = load_irrigation_model()
-weights = load_weights()
-
-# ================= SIMPLE NN =================
-def softmax(x):
-    e = np.exp(x - np.max(x))
-    return e / e.sum(axis=1, keepdims=True)
-
-def dense(x, w, b):
-    return x @ w + b
-
-def simple_predict(img):
-    x = img.flatten().reshape(1, -1)
-    w, b = weights[-1]
-    logits = dense(x, w, b)
-    return softmax(logits)
+disease_model = load_disease_model()
 
 # ================= UI =================
+
 st.title("🌱 Smart Irrigation & Crop Disease Dashboard")
 
 tab1, tab2 = st.tabs(["Irrigation Prediction", "Disease Detection"])
 
-# ---------- IRRIGATION ----------
+# =========================================================
+# IRRIGATION TAB
+# =========================================================
 with tab1:
+
+    st.header("Irrigation Recommendation")
 
     soil = st.slider("Soil Moisture (%)", 0, 100, 20)
     temp = st.slider("Temperature (°C)", 10, 45, 30)
@@ -45,18 +36,24 @@ with tab1:
     rainfall = st.selectbox("Rainfall (mm)", [0, 5, 10])
     crop = st.selectbox("Crop Type", ["Tomato", "Potato", "Pepper"])
 
-    crop_map = {"Tomato":[1,0,0], "Potato":[0,1,0], "Pepper":[0,0,1]}
+    crop_map = {
+        "Tomato":[1,0,0],
+        "Potato":[0,1,0],
+        "Pepper":[0,0,1]
+    }
+
     sample = np.array([[soil, temp, humidity, rainfall] + crop_map[crop]])
 
     if st.button("Predict Irrigation"):
 
+        # Agronomic safety rules
         if soil >= 85:
-            st.error("Irrigation blocked: Soil saturated")
+            st.error("🚫 Irrigation blocked: Soil saturated")
             stress = 80
             status = "Root hypoxia risk"
 
         elif rainfall >= 10:
-            st.warning("Rainfall sufficient")
+            st.warning("Recent rainfall sufficient")
             stress = 10
             status = "Optimal moisture"
 
@@ -69,7 +66,7 @@ with tab1:
                 status = "Severe drought stress"
             elif soil < 60:
                 stress = 40
-                status = "Mild stress"
+                status = "Mild water stress"
             else:
                 stress = 10
                 status = "Healthy"
@@ -77,18 +74,24 @@ with tab1:
         st.metric("Plant Stress Index", f"{stress}%")
         st.write(status)
 
-# ---------- DISEASE ----------
+# =========================================================
+# DISEASE TAB
+# =========================================================
 with tab2:
 
-    uploaded = st.file_uploader("Upload Leaf Image", type=["jpg","png","jpeg"])
+    st.header("Leaf Disease Detection")
 
-    if uploaded:
+    uploaded = st.file_uploader("Upload Leaf Image", type=["jpg","jpeg","png"])
+
+    if uploaded is not None:
+
         img = Image.open(uploaded).convert("RGB").resize((64,64))
-        img = np.array(img)/255.0
+        img = np.array(img) / 255.0
+        img = img.reshape(1, 64, 64, 3)
 
-        preds = simple_predict(img)
-        pred = int(np.argmax(preds))
+        preds = disease_model.predict(img)
+        pred_class = int(np.argmax(preds))
+        confidence = float(np.max(preds) * 100)
 
-        st.success(f"Disease Class: {pred}")
-        st.write(f"Confidence: {np.max(preds)*100:.2f}%")
-
+        st.success(f"Disease Class: {pred_class}")
+        st.write(f"Confidence: {confidence:.2f}%")
