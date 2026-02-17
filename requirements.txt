@@ -3,6 +3,5 @@ numpy
 pillow
 scikit-learn
 joblib
-
-
-
+h5py
+tensorflow==2.15.0
