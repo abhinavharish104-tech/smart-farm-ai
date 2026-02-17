@@ -1,20 +1,30 @@
 import streamlit as st
 import joblib
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
 import numpy as np
+from PIL import Image
+import tflite_runtime.interpreter as tflite
 
-# Load models
+# ---------------- LOAD MODELS ----------------
 irrigation_model = joblib.load("models/irrigation_model.pkl")
-disease_model = load_model("models/best_model.h5")
 
+# Load TFLite model
+interpreter = tflite.Interpreter(model_path="models/model.tflite")
+interpreter.allocate_tensors()
+
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+
+# ---------------- UI ----------------
 st.title("🌱 Smart Irrigation & Crop Disease Dashboard")
 
 tab1, tab2 = st.tabs(["Irrigation Prediction", "Disease Detection"])
 
-# --- Irrigation Prediction ---
+# =====================================================
+# IRRIGATION
+# =====================================================
 with tab1:
     st.header("Irrigation Recommendation")
+
     soil = st.slider("Soil Moisture (%)", 0, 100, 20)
     temp = st.slider("Temperature (°C)", 10, 45, 30)
     humidity = st.slider("Humidity (%)", 0, 100, 60)
@@ -28,14 +38,28 @@ with tab1:
         irrigation_need = irrigation_model.predict(sample)[0]
         st.success(f"Recommended irrigation: {irrigation_need:.2f} liters per plant")
 
-# --- Disease Detection ---
+# =====================================================
+# DISEASE DETECTION
+# =====================================================
 with tab2:
     st.header("Disease Detection")
-    uploaded_file = st.file_uploader("Upload Leaf Image", type=["jpg","png"])
-    if uploaded_file:
-        img = image.load_img(uploaded_file, target_size=(224,224))
-        x = image.img_to_array(img)/255.0
-        x = np.expand_dims(x, axis=0)
-        preds = disease_model.predict(x)
-        pred_class = np.argmax(preds, axis=1)[0]
-        st.success(f"Disease detected: Class {pred_class}")
+
+    uploaded_file = st.file_uploader("Upload Leaf Image", type=["jpg","png","jpeg"])
+
+    if uploaded_file is not None:
+
+        # Preprocess image
+        img = Image.open(uploaded_file).resize((224,224))
+        img = np.array(img)/255.0
+        img = img.astype(np.float32)
+        img = np.expand_dims(img, axis=0)
+
+        # TFLite inference
+        interpreter.set_tensor(input_details[0]['index'], img)
+        interpreter.invoke()
+        preds = interpreter.get_tensor(output_details[0]['index'])
+
+        pred_class = int(np.argmax(preds, axis=1)[0])
+        confidence = float(np.max(preds))
+
+        st.success(f"Disease detected: Class {pred_class}  |  Confidence: {confidence:.2f}")
