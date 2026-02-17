@@ -5,9 +5,9 @@ from PIL import Image
 import pickle
 
 # ---------------- LOAD MODELS ----------------
-irrigation_model = joblib.load("models/irrigation_model.pkl")
+irrigation_model = joblib.load("best_models/irrigation_model.pkl")
 
-with open("models/model_weights.pkl", "rb") as f:
+with open("best_models/model_weights.pkl", "rb") as f:
     weights = pickle.load(f)
 
 
@@ -67,3 +67,4 @@ with tab2:
         pred_class = int(np.argmax(preds))
 
         st.success(f"Disease detected: Class {pred_class}")
+
