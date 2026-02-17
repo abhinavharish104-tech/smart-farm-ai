@@ -49,39 +49,39 @@ with tab1:
     crop_map = {"Tomato":[1,0,0], "Potato":[0,1,0], "Pepper":[0,0,1]}
     sample = np.array([[soil, temp, humidity, rainfall] + crop_map[crop]])
 
-if st.button("Predict Irrigation"):
+    if st.button("Predict Irrigation"):
 
-    # -------- AGRONOMY SAFETY RULES --------
-    if soil >= 85:
-        st.error("🚫 Irrigation blocked: Soil already saturated")
-        st.info("Risk: root oxygen deficiency & fungal infection")
-        stress = 70 + (soil - 85) * 1.5
-        status = "Over-Irrigation / Root Hypoxia Risk"
+        # -------- SAFETY RULES --------
+        if soil >= 85:
+            st.error("🚫 Irrigation blocked: Soil already saturated")
+            st.info("Risk: root oxygen deficiency & fungal infection")
+            stress = 70 + (soil - 85) * 1.5
+            status = "Over-Irrigation / Root Hypoxia Risk"
 
-    elif rainfall >= 10:
-        st.warning("Recent rainfall sufficient — irrigation skipped")
-        stress = 10
-        status = "Optimal Moisture"
-
-    else:
-        # -------- ML PREDICTION --------
-        irrigation_need = irrigation_model.predict(sample)[0]
-        st.success(f"Recommended irrigation: {irrigation_need:.2f} liters per plant")
-
-        # -------- BIOLOGICAL STRESS MODEL --------
-        if soil < 30:
-            stress = 80 + (30 - soil) * 0.6
-            status = "Severe Drought Stress"
-        elif soil < 60:
-            stress = 40 - (soil - 30) * 0.8
-            status = "Mild Water Stress"
-        else:
+        elif rainfall >= 10:
+            st.warning("Recent rainfall sufficient — irrigation skipped")
             stress = 10
             status = "Optimal Moisture"
 
-    # -------- SINGLE FINAL OUTPUT --------
-    st.metric("Plant Stress Index", f"{int(stress)}%")
-    st.write(f"Plant condition: {status}")
+        else:
+            # -------- ML PREDICTION --------
+            irrigation_need = irrigation_model.predict(sample)[0]
+            st.success(f"Recommended irrigation: {irrigation_need:.2f} liters per plant")
+
+            # -------- STRESS MODEL --------
+            if soil < 30:
+                stress = 80 + (30 - soil) * 0.6
+                status = "Severe Drought Stress"
+            elif soil < 60:
+                stress = 40 - (soil - 30) * 0.8
+                status = "Mild Water Stress"
+            else:
+                stress = 10
+                status = "Optimal Moisture"
+
+        # -------- FINAL OUTPUT --------
+        st.metric("Plant Stress Index", f"{int(stress)}%")
+        st.write(f"Plant condition: {status}")
 
 
 
@@ -111,6 +111,7 @@ with tab2:
         pred_class = int(np.argmax(preds))
 
         st.success(f"Disease detected: Class {pred_class}")
+
 
 
 
