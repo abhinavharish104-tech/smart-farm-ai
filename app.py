@@ -68,8 +68,23 @@ with tab1:
         # -------- INTERPRETABLE OUTPUT --------
         st.success(f"Recommended irrigation: {irrigation_need:.2f} liters per plant")
 
-        stress = 100 - soil
-        st.metric("Plant Water Stress Index", f"{stress}%")
+       # ----- Stress Estimation (Biological Model) -----
+if soil < 30:
+    stress = 80 + (30 - soil) * 0.6
+    status = "Severe Drought Stress"
+elif soil < 60:
+    stress = 40 - (soil - 30) * 0.8
+    status = "Mild Water Stress"
+elif soil < 85:
+    stress = 10
+    status = "Optimal Moisture"
+else:
+    stress = 70 + (soil - 85) * 1.5
+    status = "Over-Irrigation / Root Hypoxia Risk"
+
+st.metric("Plant Stress Index", f"{int(stress)}%")
+st.write(f"Plant condition: {status}")
+
 
         if stress < 20:
             st.write("Plant condition: Comfortable")
@@ -92,5 +107,6 @@ with tab2:
         pred_class = int(np.argmax(preds))
 
         st.success(f"Disease detected: Class {pred_class}")
+
 
 
