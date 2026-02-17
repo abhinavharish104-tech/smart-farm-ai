@@ -36,7 +36,7 @@ st.title("🌱 Smart Irrigation & Crop Disease Dashboard")
 
 tab1, tab2 = st.tabs(["Irrigation Prediction", "Disease Detection"])
 
-# IRRIGATION
+# --- Irrigation Prediction ---
 with tab1:
     st.header("Irrigation Recommendation")
 
@@ -50,8 +50,33 @@ with tab1:
     sample = np.array([[soil, temp, humidity, rainfall] + crop_map[crop]])
 
     if st.button("Predict Irrigation"):
+
+        # -------- AGRONOMY SAFETY RULES --------
+        if soil >= 85:
+            st.error("🚫 Irrigation blocked: Soil already saturated")
+            st.info("Risk: root oxygen deficiency & fungal infection")
+            st.metric("Plant Water Stress Index", f"{100-soil}%")
+            st.stop()
+
+        if rainfall >= 10:
+            st.warning("Recent rainfall sufficient — irrigation skipped")
+            st.stop()
+
+        # -------- ML PREDICTION --------
         irrigation_need = irrigation_model.predict(sample)[0]
+
+        # -------- INTERPRETABLE OUTPUT --------
         st.success(f"Recommended irrigation: {irrigation_need:.2f} liters per plant")
+
+        stress = 100 - soil
+        st.metric("Plant Water Stress Index", f"{stress}%")
+
+        if stress < 20:
+            st.write("Plant condition: Comfortable")
+        elif stress < 50:
+            st.write("Plant condition: Mild water stress")
+        else:
+            st.write("Plant condition: Severe water stress")
 
 # DISEASE
 with tab2:
@@ -67,4 +92,5 @@ with tab2:
         pred_class = int(np.argmax(preds))
 
         st.success(f"Disease detected: Class {pred_class}")
+
 
