@@ -82,12 +82,17 @@ with tab1:
         st.write(f"Plant condition: {status}")
 
 
-        if stress < 20:
-            st.write("Plant condition: Comfortable")
-        elif stress < 50:
-            st.write("Plant condition: Mild water stress")
-        else:
-            st.write("Plant condition: Severe water stress")
+       st.metric("Plant Stress Index", f"{int(stress)}%")
+
+if soil < 30:
+    st.error("Severe drought stress — irrigation urgently required")
+elif soil < 60:
+    st.warning("Mild water deficit")
+elif soil < 85:
+    st.success("Optimal soil moisture")
+else:
+    st.error("Root hypoxia risk due to over-saturation")
+
 
 # DISEASE
 with tab2:
@@ -103,6 +108,7 @@ with tab2:
         pred_class = int(np.argmax(preds))
 
         st.success(f"Disease detected: Class {pred_class}")
+
 
 
 
