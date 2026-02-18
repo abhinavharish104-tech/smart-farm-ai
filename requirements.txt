@@ -1,8 +1,8 @@
-streamlit
+onnxruntime
+Pillow
 numpy
-pillow
-scikit-learn
 joblib
+
 
 
 
