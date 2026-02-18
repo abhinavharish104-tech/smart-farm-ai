@@ -1,7 +1,10 @@
-onnxruntime
-Pillow
+streamlit
 numpy
+pillow
 joblib
+scikit-learn
+onnxruntime
+
 
 
 
