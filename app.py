@@ -31,13 +31,22 @@ IDX_TO_CLASS = {v:k for k,v in CLASS_MAP.items()}
 # DISEASE PREDICTION
 # =========================================================
 
+def preprocess_mobilenet(img):
+
+    img = img.resize((224,224))
+    img = np.array(img).astype(np.float32)
+
+    # MobileNetV2 preprocessing
+    img = img / 127.5 - 1.0   # VERY IMPORTANT
+
+    img = np.expand_dims(img, axis=0)
+    return img
+
+
 def predict_disease(uploaded_file):
 
     img = Image.open(uploaded_file).convert("RGB")
-    img = img.resize((224,224))
-    img = np.array(img) / 255.0
-    img = img.astype("float32")
-    img = np.expand_dims(img, axis=0)
+    img = preprocess_mobilenet(img)
 
     input_name = disease_session.get_inputs()[0].name
     preds = disease_session.run(None, {input_name: img})[0][0]
@@ -49,6 +58,7 @@ def predict_disease(uploaded_file):
     label = label.replace("___"," - ").replace("_"," ")
 
     return label, confidence
+
 
 # =========================================================
 # UI
@@ -128,3 +138,4 @@ with tab2:
 
         st.success(f"Disease detected: {label}")
         st.write(f"Confidence: {confidence*100:.2f}%")
+
