@@ -3,8 +3,11 @@ import joblib
 import numpy as np
 from PIL import Image
 import onnxruntime as ort
+import json
 
-# ================= LOAD MODELS =================
+# =========================================================
+# LOAD MODELS
+# =========================================================
 
 @st.cache_resource
 def load_irrigation_model():
@@ -14,14 +17,22 @@ def load_irrigation_model():
 def load_disease_model():
     return ort.InferenceSession("best_models/plant_disease.onnx")
 
+@st.cache_resource
+def load_class_map():
+    with open("class_indices.json") as f:
+        return json.load(f)
+
 irrigation_model = load_irrigation_model()
 disease_session = load_disease_model()
+CLASS_MAP = load_class_map()
+IDX_TO_CLASS = {v:k for k,v in CLASS_MAP.items()}
 
-# ================= DISEASE PREDICTION =================
-
-CLASS_NAMES = ["Tomato", "Potato", "Pepper"]  # change if needed
+# =========================================================
+# DISEASE PREDICTION
+# =========================================================
 
 def predict_disease(uploaded_file):
+
     img = Image.open(uploaded_file).convert("RGB")
     img = img.resize((224,224))
     img = np.array(img) / 255.0
@@ -29,15 +40,21 @@ def predict_disease(uploaded_file):
     img = np.expand_dims(img, axis=0)
 
     input_name = disease_session.get_inputs()[0].name
-    preds = disease_session.run(None, {input_name: img})[0]
+    preds = disease_session.run(None, {input_name: img})[0][0]
 
     pred_class = int(np.argmax(preds))
     confidence = float(np.max(preds))
 
-    return pred_class, confidence
+    label = IDX_TO_CLASS.get(pred_class, "Unknown")
+    label = label.replace("___"," - ").replace("_"," ")
 
-# ================= UI =================
+    return label, confidence
 
+# =========================================================
+# UI
+# =========================================================
+
+st.set_page_config(page_title="Smart Farm AI", layout="wide")
 st.title("🌱 Smart Irrigation & Crop Disease Dashboard")
 
 tab1, tab2 = st.tabs(["Irrigation Prediction", "Disease Detection"])
@@ -67,7 +84,7 @@ with tab1:
     if st.button("Predict Irrigation"):
 
         if soil >= 85:
-            st.error("Irrigation blocked: Soil saturated")
+            st.error("🚫 Irrigation blocked: Soil saturated")
             stress = 80
             status = "Root hypoxia risk"
 
@@ -90,8 +107,8 @@ with tab1:
                 stress = 10
                 status = "Healthy"
 
-        st.metric("Plant Stress Index", f"{stress}%")
-        st.write(status)
+        st.metric("Plant Stress Index", f"{int(stress)}%")
+        st.write(f"Plant condition: {status}")
 
 # =========================================================
 # DISEASE TAB
@@ -104,9 +121,10 @@ with tab2:
     uploaded_file = st.file_uploader("Upload Leaf Image", type=["jpg","jpeg","png"])
 
     if uploaded_file is not None:
+
         st.image(uploaded_file, caption="Uploaded Leaf", use_column_width=True)
 
-        pred_class, confidence = predict_disease(uploaded_file)
+        label, confidence = predict_disease(uploaded_file)
 
-        st.success(f"Disease Class: {CLASS_NAMES[pred_class]}")
+        st.success(f"Disease detected: {label}")
         st.write(f"Confidence: {confidence*100:.2f}%")
